@@ -2,8 +2,15 @@ import { useState, useRef } from 'react'
 import './App.css'
 import RecordRTC from 'recordrtc'
 
+const STATUS = {
+  WAITING: 'waiting to record',
+  RECORDING: 'recording',
+  RECOREDED: 'recorded',
+}
+
 function App() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [status, setStatus] = useState<string>(STATUS.WAITING)
   const deviceRef = useRef<HTMLSelectElement>(null)
   const recorderRef = useRef<RecordRTC.RecordRTCPromisesHandler | null>(null)
   const blobRef = useRef<Blob | null>(null)
@@ -25,6 +32,7 @@ function App() {
       disableLogs: true
     });
     recorderRef.current.startRecording();
+    setStatus(STATUS.RECORDING)
   }
 
   const stopRecording = async () => {
@@ -34,6 +42,7 @@ function App() {
     await recorderRef.current.stopRecording();
     blobRef.current = await recorderRef.current.getBlob();
     recorderRef.current.destroy();
+    setStatus(STATUS.RECOREDED)
   }
 
   const saveRecording = async () => {
@@ -56,6 +65,7 @@ function App() {
       <button onClick={stopRecording}>Stop Recording</button>
       <button onClick={saveRecording}>Save Recording</button>
     </header>
+    <p>{status}</p>
   </div>
 }
 
