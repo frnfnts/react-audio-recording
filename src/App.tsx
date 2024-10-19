@@ -17,13 +17,17 @@ function App() {
   const recorderRef = useRef<RecordRTC.RecordRTCPromisesHandler | null>(null)
   const blobRef = useRef<Blob | null>(null)
   const fileFormatRef = useRef<HTMLSelectElement>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   useEffect(() => {
     (async () => {
       // wave lock を使って画面がスリープしないようにする
       try {
-        const wakeLock = await navigator.wakeLock.request("screen");
-      } catch (err) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", () => {
+          wakeLockRef.current = null;
+        });
+      } catch (err: any) {
         console.log(`${err.name}, ${err.message}`);
       }
     })()
