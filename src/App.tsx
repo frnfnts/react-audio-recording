@@ -43,13 +43,16 @@ function App() {
       return
     }
     await recorderRef.current.stopRecording();
-    blobRef.current = await recorderRef.current.getBlob();
-    recorderRef.current.destroy();
-    setStatus(STATUS.RECOREDED)
+    await RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
+      blobRef.current = blob;
+      recorderRef.current?.destroy();
+      setStatus(STATUS.RECOREDED)
+    });
   }
 
   const saveRecording = async () => {
     if (!blobRef.current) {
+      console.error('No recording to save')
       return
     }
     RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
