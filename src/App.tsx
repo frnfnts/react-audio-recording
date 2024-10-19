@@ -8,12 +8,15 @@ const STATUS = {
   RECOREDED: 'recorded',
 }
 
+const FILE_FORMATS = ["wav", "webm"]
+
 function App() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [status, setStatus] = useState<string>(STATUS.WAITING)
   const deviceRef = useRef<HTMLSelectElement>(null)
   const recorderRef = useRef<RecordRTC.RecordRTCPromisesHandler | null>(null)
   const blobRef = useRef<Blob | null>(null)
+  const fileFormatRef = useRef<HTMLSelectElement>(null)
 
   const loadDevices = async () => {
     await navigator.mediaDevices.getUserMedia({audio: true})
@@ -28,7 +31,7 @@ function App() {
     recorderRef.current =
       new RecordRTC.RecordRTCPromisesHandler(stream, {
       type: 'audio',
-      mimeType: 'audio/wav',
+      mimeType: `audio/${fileFormatRef.current?.value}` as "audio/wav" | "audio/webm",
       disableLogs: true
     });
     recorderRef.current.startRecording();
@@ -49,13 +52,18 @@ function App() {
     if (!blobRef.current) {
       return
     }
-    RecordRTC.invokeSaveAsDialog(blobRef.current, 'audio.wav')
+    RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
   }
 
   return <div className="App">
     <h1>Devices</h1>
     <select ref={deviceRef}>
       {devices.map(device => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
+    </select>
+
+    <h1>File Format</h1>
+    <select ref={fileFormatRef} disabled={status === STATUS.RECORDING}>
+      {FILE_FORMATS.map(format => <option key={format} value={format}>{format}</option>)}
     </select>
 
     <h1>Audio Recording</h1>
