@@ -8,12 +8,12 @@ function App() {
   const recorderRef = useRef<RecordRTC.RecordRTCPromisesHandler | null>(null)
   const blobRef = useRef<Blob | null>(null)
 
-  useEffect(() => {
-    (async () => {
-      const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'audioinput')
-      setDevices(devices)
-    })()
-  }, [])
+  const loadDevices = async () => {
+    await navigator.mediaDevices.getUserMedia({audio: true})
+    const devices = (await navigator.mediaDevices.enumerateDevices())
+    setDevices(devices.filter(device => device.kind === 'audioinput'))
+  }
+
 
   const startRecording = async () => {
     const deviceId = deviceRef.current?.value
@@ -51,6 +51,7 @@ function App() {
 
     <h1>Audio Recording</h1>
     <header className="App-header">
+      <button onClick={loadDevices}>Load Devices</button>
       <button onClick={startRecording}>Start Recording</button>
       <button onClick={stopRecording}>Stop Recording</button>
       <button onClick={saveRecording}>Save Recording</button>
