@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import './App.css'
 import RecordRTC from 'recordrtc'
 
@@ -17,6 +17,17 @@ function App() {
   const recorderRef = useRef<RecordRTC.RecordRTCPromisesHandler | null>(null)
   const blobRef = useRef<Blob | null>(null)
   const fileFormatRef = useRef<HTMLSelectElement>(null)
+
+  useEffect(() => {
+    (async () => {
+      // wave lock を使って画面がスリープしないようにする
+      try {
+        const wakeLock = await navigator.wakeLock.request("screen");
+      } catch (err) {
+        console.log(`${err.name}, ${err.message}`);
+      }
+    })()
+  }, [])
 
   const loadDevices = async () => {
     await navigator.mediaDevices.getUserMedia({audio: true})
