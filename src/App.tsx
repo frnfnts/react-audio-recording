@@ -23,8 +23,8 @@ function App() {
   const intervalRef = useRef<number | null>(null)
 
   useEffect(() => {
-    (async () => {
-      // wave lock を使って画面がスリープしないようにする
+    // wave lock を使って画面がスリープしないようにする
+    const requestWakeLock = async () => {
       try {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
         wakeLockRef.current.addEventListener("release", () => {
@@ -33,6 +33,16 @@ function App() {
       } catch (err: any) {
         console.log(`${err.name}, ${err.message}`);
       }
+    }
+
+    (async () => {
+      await requestWakeLock();
+      // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
+      document.addEventListener('visibilitychange', async () => {
+        if (wakeLockRef.current !== null && document.visibilityState === 'visible') {
+          await requestWakeLock();
+        }
+      });
     })()
   }, [])
 
