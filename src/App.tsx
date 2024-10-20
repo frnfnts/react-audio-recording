@@ -93,11 +93,15 @@ function App() {
   }
 
   const formatTime = (time: number) => {
-    const hours = Math.floor(time / 3600000) || null
-    const minutes = Math.floor(time / 60000) || null
-    const seconds = Math.floor(time / 1000) || null
-    const decimals = Math.floor(time / 100) % 10
-    return [hours, minutes, seconds, decimals].filter(v => v !== null).join(':')
+    let left = time
+    const hours = Math.floor(left / 3600000)
+    left -= hours * 3600000
+    const minutes = Math.floor(left / 60000)
+    left -= minutes * 60000
+    const seconds = Math.floor(left / 1000)
+    left -= seconds * 1000
+    const decisecond = Math.floor(left / 100)
+    return [hours, minutes, seconds, decisecond].filter(v => v !== null).join(':')
   }
 
   return <div className="App">
