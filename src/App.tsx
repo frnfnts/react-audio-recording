@@ -18,6 +18,9 @@ function App() {
   const blobRef = useRef<Blob | null>(null)
   const fileFormatRef = useRef<HTMLSelectElement>(null)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const [timeStart, setTimeStart] = useState(0);
+  const [time, setTime] = useState(0);
+  const intervalRef = useRef<number | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -51,6 +54,11 @@ function App() {
     });
     recorderRef.current.startRecording();
     setStatus(STATUS.RECORDING)
+    setTimeStart(performance.now());
+    setTime(0);
+    intervalRef.current = setInterval(() => {
+      setTime(performance.now() - timeStart);
+    }, 100);
   }
 
   const stopRecording = async () => {
@@ -63,6 +71,7 @@ function App() {
       recorderRef.current?.destroy();
       setStatus(STATUS.RECOREDED)
     });
+    intervalRef.current && clearInterval(intervalRef.current);
   }
 
   const saveRecording = async () => {
@@ -71,6 +80,14 @@ function App() {
       return
     }
     RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
+  }
+
+  const formatTime = (time: number) => {
+    const hours = Math.floor(time / 3600000) || null
+    const minutes = Math.floor(time / 60000) || null
+    const seconds = Math.floor(time / 1000) || null
+    const decimals = Math.floor(time / 100) % 10
+    return [hours, minutes, seconds, decimals].filter(v => v !== null).join(':')
   }
 
   return <div className="App">
@@ -92,6 +109,7 @@ function App() {
       <button onClick={saveRecording}>Save Recording</button>
     </header>
     <p>{status}</p>
+    <p>{formatTime(time)}</p>
   </div>
 }
 
