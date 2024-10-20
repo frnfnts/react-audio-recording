@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import './App.css'
 import RecordRTC from 'recordrtc'
 
@@ -22,28 +22,25 @@ function App() {
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    // wave lock を使って画面がスリープしないようにする
-    const requestWakeLock = async () => {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request("screen");
-        wakeLockRef.current.addEventListener("release", () => {
-          wakeLockRef.current = null;
-        });
-      } catch (err: any) {
-        console.log(`${err.name}, ${err.message}`);
-      }
+  // wave lock を使って画面がスリープしないようにする
+  const requestWakeLock = useCallback(async () => {
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request("screen");
+    } catch (err: any) {
+      console.log(`${err.name}, ${err.message}`);
     }
+  }, [])
 
+  useEffect(() => {
     (async () => {
       await requestWakeLock();
-      // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
-      document.addEventListener('visibilitychange', async () => {
-        if (wakeLockRef.current !== null && document.visibilityState === 'visible') {
-          await requestWakeLock();
-        }
-      });
     })()
+    // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
+    document.addEventListener('visibilitychange', async () => {
+      if (wakeLockRef.current?.released && document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    });
   }, [])
 
   const loadDevices = async () => {
