@@ -18,7 +18,7 @@ function App() {
   const blobRef = useRef<Blob | null>(null)
   const fileFormatRef = useRef<HTMLSelectElement>(null)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
-  const [timeStart, setTimeStart] = useState(0);
+  const startTimeRef = useRef<number | null>(null)
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
 
@@ -61,10 +61,10 @@ function App() {
     });
     recorderRef.current.startRecording();
     setStatus(STATUS.RECORDING)
-    setTimeStart(performance.now());
+    startTimeRef.current = performance.now()
     setTime(0);
     intervalRef.current = setInterval(() => {
-      setTime(performance.now() - timeStart);
+      setTime(performance.now() - startTimeRef.current)
     }, 100);
   }
 
