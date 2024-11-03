@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import './App.css'
 import RecordRTC from 'recordrtc'
+import { useAutoSave } from './useAutoSave'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from './db'
 
 const STATUS = {
   WAITING: 'waiting to record',
@@ -9,6 +12,7 @@ const STATUS = {
 }
 
 const FILE_FORMATS = ["wav", "webm"]
+const TIME_SLICE = 3000
 
 function App() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
@@ -21,6 +25,7 @@ function App() {
   const startTimeRef = useRef<number | null>(null)
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
+  const {startAutoSave, stopAutoSave, loadAutoSave, clearAutoSave} = useAutoSave({ key: "autosave", timeSlice: TIME_SLICE })
 
   // wave lock を使って画面がスリープしないようにする
   const requestWakeLock = useCallback(async () => {
@@ -49,36 +54,38 @@ function App() {
     setDevices(devices.filter(device => device.kind === 'audioinput'))
   }
 
-
-  const startRecording = async () => {
+  const startRecording = useCallback(async () => {
     const deviceId = deviceRef.current?.value
     const stream = await navigator.mediaDevices.getUserMedia({audio: {deviceId: {exact: deviceId}}})
     recorderRef.current =
       new RecordRTC.RecordRTCPromisesHandler(stream, {
       type: 'audio',
       mimeType: `audio/${fileFormatRef.current?.value}` as "audio/wav" | "audio/webm",
-      disableLogs: true
+      disableLogs: true,
+      timeSlice: TIME_SLICE,
     });
     recorderRef.current.startRecording();
     setStatus(STATUS.RECORDING)
     startTimeRef.current = performance.now()
     setTime(0);
     intervalRef.current = setInterval(() => {
-      setTime(performance.now() - startTimeRef.current)
+      setTime(performance.now() - (startTimeRef?.current || 0))
     }, 100);
-  }
+    startAutoSave(recorderRef.current)
+  }, [])
 
   const stopRecording = async () => {
     if (!recorderRef.current) {
       return
     }
     await recorderRef.current.stopRecording();
-    await RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
+    RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
       blobRef.current = blob;
       recorderRef.current?.destroy();
       setStatus(STATUS.RECOREDED)
     });
     intervalRef.current && clearInterval(intervalRef.current);
+    stopAutoSave();
   }
 
   const saveRecording = async () => {
@@ -87,6 +94,17 @@ function App() {
       return
     }
     RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
+  }
+
+  const loadAutoSave_ = async () => {
+    const recordingBlob = await loadAutoSave()
+    if (!recordingBlob) {
+      return
+    }
+    RecordRTC.getSeekableBlob(recordingBlob, (blob) => {
+      blobRef.current = blob;
+      setStatus(STATUS.RECOREDED)
+    });
   }
 
   const formatTime = (time: number) => {
@@ -100,6 +118,8 @@ function App() {
     const decisecond = Math.floor(left / 100)
     return [hours, minutes, seconds, decisecond].filter(v => v !== null).join(':')
   }
+
+  const autoSaves = useLiveQuery(() => db.autoSaveBlob.toArray(), [])
 
   return <div className="App">
     <h1>Devices</h1>
@@ -118,9 +138,16 @@ function App() {
       <button onClick={startRecording}>Start Recording</button>
       <button onClick={stopRecording}>Stop Recording</button>
       <button onClick={saveRecording}>Save Recording</button>
+      <button onClick={loadAutoSave_}>Load Auto Save</button>
+      <button onClick={clearAutoSave}>Clear Auto Save</button>
     </header>
     <p>{status}</p>
     <p>{formatTime(time)}</p>
+    <div>
+      {autoSaves?.map((autoSave, i) => {
+        return <p key={i}>{`Auto Save ${i}: ${autoSave.id} ${autoSave.seq}`}</p>
+      })}
+    </div>
   </div>
 }
 
