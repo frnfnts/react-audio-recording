@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "dexie": "^4.0.9",
+    "dexie-react-hooks": "^1.1.7",
     "install": "^0.13.0",
     "npm": "^10.9.0",
     "react": "^18.3.1",
