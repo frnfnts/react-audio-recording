@@ -26,7 +26,9 @@ export const useAutoSave = ({ timeSlice, key }: props) => {
     if (!recorder) {
       return
     }
-    const internalRecorder: RecordRTC.MediaStreamRecorder = await recorder.getInternalRecorder()
+    const internalRecorder = await recorder.getInternalRecorder()
+    // もともとのパッケージの型定義がおかしいので無視する
+    // @ts-ignore
     const blobs = await internalRecorder.getArrayOfBlobs()
     await db.autoSaveBlob.bulkPut(blobs.slice(blobCountRef.current, blobs.length).map((blob: Blob) => {
       return {
