@@ -25,7 +25,7 @@ function App() {
   const startTimeRef = useRef<number | null>(null)
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
-  const {startAutoSave, stopAutoSave, loadAutoSave, clearAutoSave} = useAutoSave({ key: "autosave", timeSlice: TIME_SLICE })
+  const {ondataavailable, loadAutoSave, clearAutoSave} = useAutoSave({ key: "autosave" })
 
   // wave lock を使って画面がスリープしないようにする
   const requestWakeLock = useCallback(async () => {
@@ -63,6 +63,7 @@ function App() {
       mimeType: `audio/${fileFormatRef.current?.value}` as "audio/wav" | "audio/webm",
       disableLogs: true,
       timeSlice: TIME_SLICE,
+      ondataavailable,
     });
     recorderRef.current.startRecording();
     setStatus(STATUS.RECORDING)
@@ -71,7 +72,6 @@ function App() {
     intervalRef.current = setInterval(() => {
       setTime(performance.now() - (startTimeRef?.current || 0))
     }, 100);
-    startAutoSave(recorderRef.current)
   }, [])
 
   const stopRecording = async () => {
@@ -85,7 +85,6 @@ function App() {
       setStatus(STATUS.RECOREDED)
     });
     intervalRef.current && clearInterval(intervalRef.current);
-    stopAutoSave();
   }
 
   const saveRecording = async () => {

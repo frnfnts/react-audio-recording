@@ -1,44 +1,22 @@
-import { useRef, useCallback } from 'react'
+import { useRef } from 'react'
 import { db } from './db'
-import RecordRTC from 'recordrtc'
 
 type props = {
-  timeSlice: number,
   key: string
 }
 
-export const useAutoSave = ({ timeSlice, key }: props) => {
-  const autoSaveIntervalRef = useRef<number | null>(null)
+export const useAutoSave = ({ key }: props) => {
   const blobCountRef = useRef<number>(0)
 
-  const startAutoSave = useCallback(async (recorder: RecordRTC.RecordRTCPromisesHandler) => {
-    autoSaveIntervalRef.current = setInterval(async () => {
-      await autoSave(recorder)
-    }, timeSlice)
-  }, [])
-
-  const stopAutoSave = useCallback(() => {
-    autoSaveIntervalRef.current && clearInterval(autoSaveIntervalRef.current);
-  }, [])
-
-
-  const autoSave = useCallback(async (recorder: RecordRTC.RecordRTCPromisesHandler) => {
-    if (!recorder) {
-      return
-    }
-    const internalRecorder = await recorder.getInternalRecorder()
-    // もともとのパッケージの型定義がおかしいので無視する
-    // @ts-ignore
-    const blobs = await internalRecorder.getArrayOfBlobs()
-    await db.autoSaveBlob.bulkPut(blobs.slice(blobCountRef.current, blobs.length).map((blob: Blob) => {
-      return {
-        id: key,
-        seq: blobCountRef.current++,
-        blob: blob,
-        createdAt: new Date()
-      }
-    }))
-  }, [])
+  // timeSlice毎と録音終了時に呼ばれる
+  const ondataavailable = async (blob: Blob) => {
+    await db.autoSaveBlob.put({
+      id: key,
+      seq: blobCountRef.current++,
+      blob: blob,
+      createdAt: new Date()
+    })
+  }
 
   const loadAutoSave = async () => {
     const recordingBlobs = await db.autoSaveBlob.where('id').equals(key).toArray()
@@ -54,5 +32,5 @@ export const useAutoSave = ({ timeSlice, key }: props) => {
     await db.autoSaveBlob.where('id').equals(key).delete()
   }
 
-  return { startAutoSave, stopAutoSave, loadAutoSave, clearAutoSave }
+  return { ondataavailable, loadAutoSave, clearAutoSave }
 }
