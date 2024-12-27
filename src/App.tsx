@@ -26,13 +26,15 @@ function App() {
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
   const {ondataavailable, loadAutoSave, clearAutoSave} = useAutoSave({ key: "autosave" })
+  const errorRef = useRef<string | null>(null)
 
   // wave lock を使って画面がスリープしないようにする
   const requestWakeLock = useCallback(async () => {
     try {
       wakeLockRef.current = await navigator.wakeLock.request("screen");
     } catch (err: any) {
-      console.log(`${err.name}, ${err.message}`);
+      console.error(`${err.name}, ${err.message}`);
+      errorRef.current = `${err.name}, ${err.message}`
     }
   }, [])
 
@@ -90,6 +92,7 @@ function App() {
   const saveRecording = async () => {
     if (!blobRef.current) {
       console.error('No recording to save')
+      errorRef.current = 'No recording to save'
       return
     }
     RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
@@ -142,6 +145,7 @@ function App() {
     </header>
     <p>{status}</p>
     <p>{formatTime(time)}</p>
+    <p style={{color: 'red'}} >{errorRef.current}</p>
     <div>
       {autoSaves?.map((autoSave, i) => {
         return <p key={i}>{`Auto Save ${i}: ${autoSave.id} ${autoSave.seq}`}</p>
