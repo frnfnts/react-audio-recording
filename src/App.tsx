@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import './App.css'
 import RecordRTC from 'recordrtc'
 import { useAutoSave } from './useAutoSave'
@@ -26,7 +26,7 @@ function App() {
   const [time, setTime] = useState(0);
   const intervalRef = useRef<number | null>(null)
   const {ondataavailable, loadAutoSave, clearAutoSave} = useAutoSave({ key: "autosave" })
-  const errorRef = useRef<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // wave lock を使って画面がスリープしないようにする
   const requestWakeLock = useCallback(async () => {
@@ -34,7 +34,7 @@ function App() {
       wakeLockRef.current = await navigator.wakeLock.request("screen");
     } catch (err: any) {
       console.error(`${err.name}, ${err.message}`);
-      errorRef.current = `${err.name}, ${err.message}`
+      setError(err.message)
     }
   }, [])
 
@@ -64,13 +64,14 @@ function App() {
       setTime(performance.now() - (startTimeRef?.current || 0))
     }, 100);
 
-  await requestWakeLock();
-  // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
+    await requestWakeLock();
+    // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
     document.addEventListener('visibilitychange', async () => {
       if (wakeLockRef.current?.released && document.visibilityState === 'visible') {
         await requestWakeLock();
       }
     });
+    setError(null)
   }, [requestWakeLock, ondataavailable])
 
   const stopRecording = async () => {
@@ -78,18 +79,23 @@ function App() {
       return
     }
     await recorderRef.current.stopRecording();
-    RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
-      blobRef.current = blob;
-      recorderRef.current?.destroy();
-      setStatus(STATUS.RECOREDED)
-    });
+    try {
+      RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
+        blobRef.current = blob;
+        recorderRef.current?.destroy();
+        setStatus(STATUS.RECOREDED)
+      });
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message)
+    }
     intervalRef.current && clearInterval(intervalRef.current);
   }
 
   const saveRecording = async () => {
     if (!blobRef.current) {
       console.error('No recording to save')
-      errorRef.current = 'No recording to save'
+      setError('No recording to save')
       return
     }
     RecordRTC.invokeSaveAsDialog(blobRef.current, `audio.${fileFormatRef.current?.value}`)
@@ -142,7 +148,7 @@ function App() {
     </header>
     <p>{status}</p>
     <p>{formatTime(time)}</p>
-    <p style={{color: 'red'}} >{errorRef.current}</p>
+    <p style={{color: 'red'}} >{error}</p>
     <div>
       {autoSaves?.map((autoSave, i) => {
         return <p key={i}>{`Auto Save ${i}: ${autoSave.id} ${autoSave.seq}`}</p>
