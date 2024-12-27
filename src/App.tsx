@@ -38,17 +38,6 @@ function App() {
     }
   }, [])
 
-  useEffect(() => {
-    (async () => {
-      await requestWakeLock();
-    })()
-    // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
-    document.addEventListener('visibilitychange', async () => {
-      if (wakeLockRef.current?.released && document.visibilityState === 'visible') {
-        await requestWakeLock();
-      }
-    });
-  }, [])
 
   const loadDevices = async () => {
     await navigator.mediaDevices.getUserMedia({audio: true})
@@ -74,7 +63,15 @@ function App() {
     intervalRef.current = setInterval(() => {
       setTime(performance.now() - (startTimeRef?.current || 0))
     }, 100);
-  }, [])
+
+  await requestWakeLock();
+  // 他のアプリやタブにフォーカスが移ったときに wakelock が解除されるので、再度リクエストする
+    document.addEventListener('visibilitychange', async () => {
+      if (wakeLockRef.current?.released && document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    });
+  }, [requestWakeLock, ondataavailable])
 
   const stopRecording = async () => {
     if (!recorderRef.current) {
