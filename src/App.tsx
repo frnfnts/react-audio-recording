@@ -79,8 +79,9 @@ function App() {
       return
     }
     await recorderRef.current.stopRecording();
+    blobRef.current = await recorderRef.current.getBlob()
     try {
-      RecordRTC.getSeekableBlob(await recorderRef.current.getBlob(), (blob) => {
+      RecordRTC.getSeekableBlob(blobRef.current, (blob) => {
         blobRef.current = blob;
         recorderRef.current?.destroy();
         setStatus(STATUS.RECOREDED)
